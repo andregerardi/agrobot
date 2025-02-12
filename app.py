@@ -31,7 +31,7 @@ def ask_question_from_pdf(pdf_text, question, history=[]):
     )
 
     # Criar mensagens incluindo o histórico da conversa
-    messages = [{"role": "system", "content": "Você é um assistente técnico agrícola. Suas respostas devem ser diretas, objetivas e fáceis de entender para agricultores. Responda sempre com base no conteúdo do PDF. Não mencione por exemplo, 'Recomendo que você consulte um especialista em citricultura'."}]
+    messages = [{"role": "system", "content": "Você é um assistente técnico agrícola. Suas respostas devem ser diretas, objetivas e fáceis de entender para agricultores. Responda sempre com base no conteúdo do PDF. Não mencione por exemplo, 'Recomendo que você consulte um especialista em citricultura' e não peça 'desculpas pelo atraso anterior!' "}]
     
     messages.extend(history)  # Adiciona histórico da conversa
 
