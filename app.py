@@ -6,6 +6,8 @@ from langchain.vectorstores import Chroma
 from dotenv import load_dotenv
 import os
 
+load_dotenv()
+API_KEY_ANDRE = os.getenv("API_KEY_ANDRE")
 
 # Inicializar o cliente OpenAI/Databricks
 client = OpenAI(
