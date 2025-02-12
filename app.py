@@ -2,29 +2,11 @@ import fitz  # PyMuPDF
 import streamlit as st
 from openai import OpenAI
 from langchain.text_splitter import CharacterTextSplitter
-from langchain.vectorstores import Chroma
 from dotenv import load_dotenv
 import os
 
 load_dotenv()
-API_KEY_ANDRE = os.getenv("API_KEY_ANDRE")
-
-# Inicializar o cliente OpenAI/Databricks
-client = OpenAI(
-    api_key=API_KEY_ANDRE,
-    base_url="https://fgv-pocs-genie.cloud.databricks.com/serving-endpoints"
-)
-
-# Inicializar ChromaDB
-db = Chroma(collection_name="pdf_chunks")
-
-# Função para gerar embeddings via Databricks
-def get_embeddings(text):
-    response = client.embeddings.create(
-        model="databricks-meta-llama-3-1-405b-instruct",
-        input=[text]
-    )
-    return response.data[0].embedding  # Retorna o vetor gerado
+API_KEY_ANDRE = os.getenv("dirceu-direitosp")
 
 # Função para extrair texto de um arquivo PDF
 def extract_text_from_pdf(pdf_path):
@@ -34,36 +16,30 @@ def extract_text_from_pdf(pdf_path):
         text += page.get_text()
     return text
 
-# Função para dividir o PDF e armazenar embeddings no ChromaDB
-def store_pdf_in_chromadb(pdf_text):
-    text_splitter = CharacterTextSplitter(chunk_size=300, separator="\n")
-    chunks = text_splitter.split_text(pdf_text)
-
-    for i, chunk in enumerate(chunks):
-        embedding = get_embeddings(chunk)  # Gera embedding via Databricks
-        db.add_texts([chunk], metadatas=[{"index": i}], embeddings=[embedding])
-
-# Função para buscar trechos mais relevantes no ChromaDB
-def retrieve_relevant_text(question):
-    query_embedding = get_embeddings(question)  # Gera embedding da pergunta
-    results = db.similarity_search_by_vector(query_embedding, k=3)  # Busca no ChromaDB
-    return "\n\n".join([doc.page_content for doc in results])
-
-# Função para responder perguntas com base no PDF
-def ask_question(question, history=[]):
-    relevant_text = retrieve_relevant_text(question)
-
-    messages = [
-        {
-            "role": "system",
-            "content": "Você é um assistente técnico agrícola. Suas respostas devem ser diretas, objetivas e fáceis de entender para agricultores."
-        }
-    ]
+# Função para enviar a pergunta e obter resposta considerando histórico
+def ask_question_from_pdf(pdf_text, question, history=[]):
+    try:
+        text_splitter = CharacterTextSplitter(chunk_size=200, separator="\n")
+        chunks = text_splitter.split_text(pdf_text)
+    except Exception as e:
+        st.error(f"Erro ao dividir o texto: {str(e)}")
+        return "", history
     
-    messages.extend(history)
+    client = OpenAI(
+        api_key=API_KEY_ANDRE,
+        base_url="https://fgv-pocs-genie.cloud.databricks.com/serving-endpoints"
+    )
 
-    messages.append({"role": "user", "content": f"Baseado no seguinte conteúdo do PDF:\n\n{relevant_text}\n\nPergunta: {question}"})
+    # Criar mensagens incluindo o histórico da conversa
+    messages = [{"role": "system", "content": "Você é um assistente técnico agrícola. Suas respostas devem ser diretas, objetivas e fáceis de entender para agricultores. Responda sempre com base no conteúdo do PDF. Não mencione por exemplo, 'Recomendo que você consulte um especialista em citricultura'."}]
+    
+    messages.extend(history)  # Adiciona histórico da conversa
 
+    # Adicionar contexto relevante do PDF
+    relevant_chunk = chunks[0] if chunks else "Nenhuma informação disponível no PDF."
+    messages.append({"role": "user", "content": f"Baseado no seguinte conteúdo do PDF: {relevant_chunk}\n\nPergunta: {question}"})
+
+    # Chamar a API
     chat_completion = client.chat.completions.create(
         messages=messages,
         model="databricks-meta-llama-3-1-405b-instruct",
@@ -72,6 +48,7 @@ def ask_question(question, history=[]):
     
     response = chat_completion.choices[0].message.content
 
+    # Atualizar histórico corretamente
     history.append({"role": "user", "content": question})
     history.append({"role": "assistant", "content": response})
 
@@ -90,17 +67,17 @@ def main():
             st.error("O PDF não contém texto legível.")
             return
 
-        store_pdf_in_chromadb(pdf_text)  # Armazena os embeddings do PDF
-
         if 'history' not in st.session_state:
             st.session_state.history = []
 
         st.subheader("Chat")
 
+        # Exibir histórico corretamente
         for message in st.session_state.history:
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
 
+        # Entrada de chat (parecida com a do ChatGPT)
         question = st.chat_input("Digite sua pergunta sobre o PDF...")
 
         if question:
@@ -108,7 +85,7 @@ def main():
                 st.markdown(question)
 
             with st.spinner("Processando..."):
-                response, history = ask_question(question, st.session_state.history)
+                response, history = ask_question_from_pdf(pdf_text, question, st.session_state.history)
                 st.session_state.history = history
 
             with st.chat_message("assistant"):
