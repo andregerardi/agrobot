@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 import os
 
 load_dotenv()
-API_KEY_ANDRE = os.getenv("dirceu-direitosp")
+API_KEY_ANDRE = st.secrets('auth_token')
 
 # Função para extrair texto de um arquivo PDF
 def extract_text_from_pdf(pdf_path):
