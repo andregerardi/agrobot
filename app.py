@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 import os
 
 load_dotenv()
-API_KEY_ANDRE = st.secrets["auth_token"]
+API_KEY_ANDRE = os.getenv("dirceu-direitosp")
 
 # Função para extrair texto de um arquivo PDF
 def extract_text_from_pdf(pdf_path):
@@ -19,7 +19,7 @@ def extract_text_from_pdf(pdf_path):
 # Função para enviar a pergunta e obter resposta considerando histórico
 def ask_question_from_pdf(pdf_text, question, history=[]):
     try:
-        text_splitter = CharacterTextSplitter(chunk_size=350, separator="\n")
+        text_splitter = CharacterTextSplitter(chunk_size=300, separator="\n")
         chunks = text_splitter.split_text(pdf_text)
     except Exception as e:
         st.error(f"Erro ao dividir o texto: {str(e)}")
@@ -31,7 +31,10 @@ def ask_question_from_pdf(pdf_text, question, history=[]):
     )
 
     # Criar mensagens incluindo o histórico da conversa
-    messages = [{"role": "system", "content": "Você é um assistente técnico agrícola. Suas respostas devem ser diretas, objetivas e fáceis de entender para agricultores. Responda sempre com base no conteúdo do PDF. Não mencione por exemplo, 'Recomendo que você consulte um especialista em citricultura' e não peça 'desculpas pelo atraso anterior!' "}]
+    messages = [{"role": "system", 
+                 "content": "Você é um assistente técnico agrícola.\
+                             Suas respostas devem ser fáceis de entender e voltadas para agricultores.\
+                             Não mencione por exemplo, 'Recomendo que você consulte um especialista em citricultura'."}]
     
     messages.extend(history)  # Adiciona histórico da conversa
 
@@ -42,7 +45,7 @@ def ask_question_from_pdf(pdf_text, question, history=[]):
     # Chamar a API
     chat_completion = client.chat.completions.create(
         messages=messages,
-        model="databricks-meta-llama-3-1-405b-instruct",
+        model="databricks-meta-llama-3-3-70b-instruct",
         max_tokens=750
     )
     
