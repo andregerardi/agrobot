@@ -19,7 +19,7 @@ def extract_text_from_pdf(pdf_path):
 # Função para enviar a pergunta e obter resposta considerando histórico
 def ask_question_from_pdf(pdf_text, question, history=[]):
     try:
-        text_splitter = CharacterTextSplitter(chunk_size=300, separator="\n")
+        text_splitter = CharacterTextSplitter(chunk_size=500, separator="\n")
         chunks = text_splitter.split_text(pdf_text)
     except Exception as e:
         st.error(f"Erro ao dividir o texto: {str(e)}")
