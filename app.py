@@ -4,6 +4,7 @@ from openai import OpenAI
 from langchain.text_splitter import CharacterTextSplitter
 from dotenv import load_dotenv
 import os
+import sklearn
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
