@@ -4,6 +4,9 @@ from openai import OpenAI
 from langchain.text_splitter import CharacterTextSplitter
 from dotenv import load_dotenv
 import os
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
 
 load_dotenv()
 API_KEY_ANDRE = st.secrets["auth_token"]
