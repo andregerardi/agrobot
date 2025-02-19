@@ -1,7 +1,8 @@
-langchain==0.3.18
-openai==1.61.1
-pymupdf==1.25.3
-python-dotenv==1.0.1
-streamlit==1.42.0
-langchain-community==0.3.17
-scikit-learn==1.6.1
+PyMuPDF==1.19.6
+streamlit==1.19.0
+openai==0.27.0
+langchain==0.0.179
+python-dotenv==1.0.0
+scikit-learn==1.2.2
+numpy==1.24.2
+
