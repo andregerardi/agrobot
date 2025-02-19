@@ -25,25 +25,32 @@ def ask_question_from_pdf(pdf_text, question, history=[]):
         st.error(f"Erro ao dividir o texto: {str(e)}")
         return "", history
     
+    # Calcular similaridade entre a pergunta e os chunks de texto
+    vectorizer = TfidfVectorizer().fit_transform([question] + chunks)
+    vectors = vectorizer.toarray()
+    cosine_similarities = cosine_similarity(vectors[0:1], vectors[1:]).flatten()
+    similar_indices = cosine_similarities.argsort()[-4:][::-1]  # Pegar os 4 chunks mais similares
+
     client = OpenAI(
         api_key=API_KEY_ANDRE,
         base_url="https://fgv-pocs-genie.cloud.databricks.com/serving-endpoints"
     )
 
     # Criar mensagens incluindo o histórico da conversa
-    messages = [{"role": "system", "content": "Você é um assistente técnico agrícola. Suas respostas devem ser fáceis de entender e voltadas para agricultores.Responda apenas com base o pdf fornecido. Não mencione por exemplo, 'Recomendo que você consulte um especialista em citricultura'."}]
+    messages = [{"role": "system", 
+                 "content": "Você é um assistente técnico agrícola. Suas respostas devem ser fáceis de entender e voltadas para agricultores.Responda apenas com base o pdf fornecido. Não mencione por exemplo, 'Recomendo que você consulte um especialista em citricultura'."}]
     
     messages.extend(history)  # Adiciona histórico da conversa
 
-    # Adicionar contexto relevante do PDF
-    relevant_chunk = chunks[0] if chunks else "Nenhuma informação disponível no PDF."
-    messages.append({"role": "user", "content": f"Baseado no seguinte conteúdo do PDF: {relevant_chunk}\n\nPergunta: {question}"})
+    # Adicionar contexto relevante dos chunks mais similares do PDF
+    relevant_chunks = "\n\n".join([chunks[i] for i in similar_indices])
+    messages.append({"role": "user", "content": f"Baseado no seguinte conteúdo do PDF: {relevant_chunks}\n\nPergunta: {question}"})
 
     # Chamar a API
     chat_completion = client.chat.completions.create(
         messages=messages,
         model="databricks-meta-llama-3-3-70b-instruct",
-        max_tokens=750
+        max_tokens=1024
     )
     
     response = chat_completion.choices[0].message.content
