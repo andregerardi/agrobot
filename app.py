@@ -4,9 +4,6 @@ from openai import OpenAI
 from langchain.text_splitter import CharacterTextSplitter
 from dotenv import load_dotenv
 import os
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
-import numpy as np
 
 load_dotenv()
 API_KEY_ANDRE = st.secrets["auth_token"]
@@ -19,6 +16,22 @@ def extract_text_from_pdf(pdf_path):
         text += page.get_text()
     return text
 
+# Função simples para ranquear chunks por presença de palavras da pergunta
+def get_most_relevant_chunks(question, chunks, top_n=4):
+    question_words = set(question.lower().split())
+    chunk_scores = []
+
+    for i, chunk in enumerate(chunks):
+        chunk_words = set(chunk.lower().split())
+        common_words = question_words.intersection(chunk_words)
+        score = len(common_words)
+        chunk_scores.append((i, score))
+
+    # Ordenar pelos scores decrescentes
+    sorted_chunks = sorted(chunk_scores, key=lambda x: x[1], reverse=True)
+    top_indices = [i for i, _ in sorted_chunks[:top_n]]
+    return top_indices
+
 # Função para enviar a pergunta e obter resposta considerando histórico
 def ask_question_from_pdf(pdf_text, question, history=[]):
     try:
@@ -27,41 +40,37 @@ def ask_question_from_pdf(pdf_text, question, history=[]):
     except Exception as e:
         st.error(f"Erro ao dividir o texto: {str(e)}")
         return "", history
-    
-    # Calcular similaridade entre a pergunta e os chunks de texto
-    vectorizer = TfidfVectorizer().fit_transform([question] + chunks)
-    vectors = vectorizer.toarray()
-    cosine_similarities = cosine_similarity(vectors[0:1], vectors[1:]).flatten()
-    similar_indices = cosine_similarities.argsort()[-4:][::-1]  # Pegar os 4 chunks mais similares
+
+    # Obter os chunks mais relevantes (simples)
+    similar_indices = get_most_relevant_chunks(question, chunks)
 
     client = OpenAI(
         api_key=API_KEY_ANDRE,
         base_url="https://fgv-pocs-genie.cloud.databricks.com/serving-endpoints"
     )
 
-    # Criar mensagens incluindo o histórico da conversa
-       # Criar mensagens incluindo o histórico da conversa
-    messages = [{"role": "system", 
-                 "content": "Você é um assistente técnico agrícola. "
-                 "Suas respostas devem ser fáceis de entender e voltadas para agricultores."
-                 "Responda apenas com base o pdf fornecido."}]
-    
-    messages.extend(history)  # Adiciona histórico da conversa
+    messages = [{
+        "role": "system", 
+        "content": (
+            "Você é um assistente técnico agrícola. "
+            "Suas respostas devem ser fáceis de entender e voltadas para agricultores. "
+            "Responda apenas com base no pdf fornecido."
+        )
+    }]
 
-    # Adicionar contexto relevante dos chunks mais similares do PDF
+    messages.extend(history)
+
     relevant_chunks = "\n\n".join([chunks[i] for i in similar_indices])
     messages.append({"role": "user", "content": f"Baseado no seguinte conteúdo do PDF: {relevant_chunks}\n\nPergunta: {question}"})
 
-    # Chamar a API
     chat_completion = client.chat.completions.create(
         messages=messages,
         model="databricks-meta-llama-3-3-70b-instruct",
         max_tokens=1024
     )
-    
+
     response = chat_completion.choices[0].message.content
 
-    # Atualizar histórico corretamente
     history.append({"role": "user", "content": question})
     history.append({"role": "assistant", "content": response})
 
@@ -85,12 +94,10 @@ def main():
 
         st.subheader("Chat")
 
-        # Exibir histórico corretamente
         for message in st.session_state.history:
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
 
-        # Entrada de chat (parecida com a do ChatGPT)
         question = st.chat_input("Digite sua pergunta sobre o PDF...")
 
         if question:
