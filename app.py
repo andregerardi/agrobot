@@ -8,9 +8,9 @@ import os
 load_dotenv()
 API_KEY_ANDRE = st.secrets["auth_token"]
 
-# Função para extrair texto de um arquivo PDF
-def extract_text_from_pdf(pdf_path):
-    doc = fitz.open(pdf_path)
+# Corrigida: aceita arquivo binário (ex: BytesIO)
+def extract_text_from_pdf(file_obj):
+    doc = fitz.open(stream=file_obj.read(), filetype="pdf")
     text = ""
     for page in doc:
         text += page.get_text()
@@ -80,10 +80,11 @@ def ask_question_from_pdf(pdf_text, question, history=[]):
 def main():
     st.title("Agrônomo Virtual 🤖")
 
-    uploaded_file = st.file_uploader("Escolha um arquivo PDF", type=["pdf"])
+    uploaded_file = st.file_uploader("Envie o PDF", type="pdf")
 
-    if uploaded_file is not None:
+    if uploaded_file:
         pdf_text = extract_text_from_pdf(uploaded_file)
+        st.text_area("Texto extraído", pdf_text, height=400)
 
         if not pdf_text.strip():
             st.error("O PDF não contém texto legível.")
