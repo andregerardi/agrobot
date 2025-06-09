@@ -84,7 +84,7 @@ def main():
 
     if uploaded_file:
         pdf_text = extract_text_from_pdf(uploaded_file)
-        st.text_area("Texto extraído", pdf_text, height=400)
+        #st.text_area("Texto extraído", pdf_text, height=400)
 
         if not pdf_text.strip():
             st.error("O PDF não contém texto legível.")
