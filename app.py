@@ -44,10 +44,7 @@ def ask_question_from_pdf(pdf_text, question, history=[]):
     # Obter os chunks mais relevantes (simples)
     similar_indices = get_most_relevant_chunks(question, chunks)
 
-    client = OpenAI(
-        api_key=API_KEY_ANDRE,
-        base_url="https://fgv-pocs-genie.cloud.databricks.com/serving-endpoints"
-    )
+    client = OpenAI(api_key=API_KEY_ANDRE)
 
     messages = [{
         "role": "system", 
@@ -63,9 +60,11 @@ def ask_question_from_pdf(pdf_text, question, history=[]):
     relevant_chunks = "\n\n".join([chunks[i] for i in similar_indices])
     messages.append({"role": "user", "content": f"Baseado no seguinte conteúdo do PDF: {relevant_chunks}\n\nPergunta: {question}"})
 
+    client = OpenAI(api_key=API_KEY_ANDRE)
+    
     chat_completion = client.chat.completions.create(
         messages=messages,
-        model="databricks-meta-llama-3-3-70b-instruct",
+        model="gpt-4o",  # ou "gpt-3.5-turbo"
         max_tokens=1024
     )
 
