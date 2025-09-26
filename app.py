@@ -64,7 +64,7 @@ def ask_question_from_pdf(pdf_text, question, history=[]):
     
     chat_completion = client.chat.completions.create(
         messages=messages,
-        model="gpt-4o",  # ou "gpt-3.5-turbo"
+        model="gpt-3.5-turbo",  # ou "gpt-3.5-turbo"
         max_tokens=1024
     )
 
